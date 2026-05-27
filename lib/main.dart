@@ -1,6 +1,12 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'core/app_routes.dart';
+import 'core/app_theme.dart';
+import 'features/auth/splash_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const SmartGPTApp());
 }
 
@@ -12,18 +18,9 @@ class SmartGPTApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SmartGPT',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const SafeArea(
-        child: Center(
-          child: Text(
-            'SmartGPT app skeleton ready. Next: auth + chat UI.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
+      theme: AppTheme.darkTheme(),
+      home: const SplashScreen(),
+      onGenerateRoute: AppRoutes.generate,
     );
   }
 }
