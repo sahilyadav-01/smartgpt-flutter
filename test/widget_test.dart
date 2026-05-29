@@ -9,11 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:smartgpt/main.dart';
+import 'firebase_test_config.dart';
+
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    await ensureFirebaseInitializedForTests();
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const SmartGPTApp());
+
 
 
     // Verify that our counter starts at 0.
