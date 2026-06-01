@@ -88,6 +88,9 @@ _Add screenshots here once available:*
 
 ---
 
+## 🔗 GitHub
+Project repository: https://github.com/sahil-yadav/smartgpt
+
 ## License
 
 _MIT / Apache-2.0 / proprietary (add your license here)_
