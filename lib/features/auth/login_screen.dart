@@ -1,77 +1,54 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../../core/app_routes.dart';
-import '../../services/auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  bool _loading = false;
 
-  Future<void> _login() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _signInEmail() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    final auth = ref.read(authServiceProvider);
     try {
-      await AuthService.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
+      await auth.signInWithEmail(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(AppRoutes.chat);
-    } on FirebaseAuthException catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Login failed.')),
-      );
-    } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    } finally {
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _signInGoogle() async {
+    setState(() => _loading = true);
+    final auth = ref.read(authServiceProvider);
     try {
-      await AuthService.signInWithGoogle();
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(AppRoutes.chat);
-    } on FirebaseAuthException catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? 'Google sign-in failed.')),
-      );
-    } catch (error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    } finally {
+      await auth.signInWithGoogle();
+    } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-  }
-
-  void _continueAsGuest() {
-    Navigator.of(context).pushReplacementNamed(AppRoutes.chat);
   }
 
   @override
@@ -83,93 +60,70 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 16),
-              const Text(
-                'Welcome to SmartGPT',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
+      appBar: AppBar(title: const Text('Sign in')),
+      body: authState.when(
+        data: (user) {
+          if (user != null) {
+            return Center(child: Text('Signed in as ${user.email}'));
+          }
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        validator: (v) => (v == null || v.isEmpty) ? 'Enter email' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(labelText: 'Password'),
+                        validator: (v) => (v == null || v.isEmpty) ? 'Enter password' : null,
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _signInEmail,
+                          child: _loading
+                              ? const CircularProgressIndicator()
+                              : const Text('Sign in'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Sign in to continue with your AI assistant.',
-                style: TextStyle(fontSize: 16, color: Colors.white70),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'you@example.com',
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.account_circle),
+                        label: const Text('Sign in with Google'),
+                        onPressed: _loading ? null : _signInGoogle,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Login'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _signInWithGoogle,
-                  icon: const Icon(Icons.login, color: Colors.white),
-                  label: const Text('Continue with Google'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        Navigator.of(context).pushNamed(AppRoutes.register);
-                      },
-                child: const Text('Create account'),
-              ),
-              TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () {
-                        Navigator.of(context).pushNamed(AppRoutes.forgotPassword);
-                      },
-                child: const Text('Forgot password?'),
-              ),
-              TextButton(
-                onPressed: _isLoading ? null : _continueAsGuest,
-                child: const Text('Continue as guest'),
-              ),
-            ],
-          ),
-        ),
+              ],
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, st) => Center(child: Text('Error: $e')),
       ),
     );
   }
 }
+

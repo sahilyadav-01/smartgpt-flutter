@@ -1,28 +1,28 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../chat/chat_screen.dart';
 import 'login_screen.dart';
-import '../../services/auth_service.dart';
+import 'auth_provider.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends ConsumerWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<User?>(
-        stream: AuthService.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
 
-          if (snapshot.hasData) {
-            return const ChatScreen();
-          }
-
-          return const LoginScreen();
-        },
+    return authState.when(
+      data: (user) {
+        if (user != null) {
+          return const ChatScreen();
+        }
+        return const LoginScreen();
+      },
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) => Scaffold(
+        body: Center(child: Text('Error: $e')),
       ),
     );
   }

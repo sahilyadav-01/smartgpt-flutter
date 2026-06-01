@@ -226,3 +226,4 @@ openai_service.dart
 ```
 
 These will create the first working SmartGPT prototype quickly.
+
